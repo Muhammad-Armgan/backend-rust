@@ -15,10 +15,7 @@ pub async fn create_pool(settings: &Settings) -> Result<DbPool> {
         .connect(&settings.database_url)
         .await
         .with_context(|| {
-            format!(
-                "Failed to connect to PostgreSQL. Check DATABASE_URL and DB availability: {}",
-                settings.database_url
-            )
+            "Failed to connect to PostgreSQL. Check DATABASE_URL and DB availability.".to_string()
         })?;
 
     sqlx::query("SELECT 1")
