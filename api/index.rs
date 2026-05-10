@@ -11,37 +11,23 @@ use backend_rust::{
     state::{AppState, SharedState},
 };
 use tokio::sync::OnceCell;
-use tower::ServiceExt;
-use vercel_runtime::{run_service, service_fn, Error, Request};
+use vercel_runtime::{run, Error};
 
 static APP_STATE: OnceCell<SharedState> = OnceCell::const_new();
-static LOG_INIT: OnceCell<()> = OnceCell::const_new();
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run_service(service_fn(handler)).await
-}
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter("info,backend_rust=debug")
+        .try_init();
 
-async fn handler(req: Request) -> Result<axum::response::Response, Error> {
-    init_logs().await;
     let state = get_state().await?;
 
     let app: Router = build_api_router(state.clone())
         .layer(build_cors(&state.settings))
         .layer(build_trace());
 
-    let response = app.oneshot(req).await?;
-    Ok(response)
-}
-
-async fn init_logs() {
-    let _ = LOG_INIT
-        .get_or_init(|| async {
-            let _ = tracing_subscriber::fmt()
-                .with_env_filter("info,backend_rust=debug")
-                .try_init();
-        })
-        .await;
+    run(app).await
 }
 
 async fn get_state() -> Result<SharedState, Error> {
